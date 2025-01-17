@@ -1,4 +1,4 @@
 sessionCookies.json
 node_modules/
 *.pdf
-processed/
+*.csv
