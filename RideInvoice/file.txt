@@ -1,0 +1,4 @@
+This is the folder where you have to keep all your pdf files ( invoices)
+ --- if already old pdf's are available first delete them before adding new once's
+ --- you can also delete processed folder. 
+ --- 
