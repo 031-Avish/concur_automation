@@ -51,7 +51,7 @@ const doForNammaYatri = (filePath, text) => {
     let currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
     // this is to handle the case when you are in jan or feb and uploading the bills of dec or nov of previous year (as namma yatri receipt do not have year mentioned)
-    if (monthInNumber == 9 || monthInNumber == 10 || monthInNumber == 11 && currentMonth == 0 || currentMonth == 1 || currentMonth == 2)
+    if ((monthInNumber == 9 || monthInNumber == 10 || monthInNumber == 11) && (currentMonth == 0 || currentMonth == 1 || currentMonth == 2))
     {  
       currentYear -= 1;
     }
@@ -64,7 +64,7 @@ const doForNammaYatri = (filePath, text) => {
   console.log(text.match(addressRegex))
   const match = text.match(addressRegex);
   const from = match[0].split('...')[0].trim();
-  const to = match[0].split('...')[1].trim();
+  const to = match[0].split('...')[0].trim();
   const output = {
     from,
     to,
