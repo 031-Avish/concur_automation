@@ -4,9 +4,9 @@ const path = require('path');
 const csv = require('csv-parser');
 
 const monthNames = ["January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"];
-  const currentMonth = monthNames[new Date().getMonth()];
-  const reportName = `December Expenses`;
+  "July", "August", "September", "October", "November", "December"];
+const currentMonth = monthNames[new Date().getMonth()];
+const reportName = `January Expenses`;
 // path of csv
 const csvFilePath = path.resolve(__dirname, 'RideInvoice/processed/output.csv');
 
@@ -77,7 +77,7 @@ const formatDate = (inputDate) => {
   } catch (error) {
     console.log("Could not find the button with class 'sapcnqr-button__text'.");
   }
-  
+
   // const monthNames = ["January", "February", "March", "April", "May", "June",
   //   "July", "August", "September", "October", "November", "December"];
   // const currentMonth = monthNames[new Date().getMonth()];
@@ -129,29 +129,39 @@ const formatDate = (inputDate) => {
     console.log('Scrolled to the top of the page.');
 
     await new Promise(resolve => setTimeout(resolve, 3000));
-    await page.waitForSelector('div[name="custom17"]', { visible: true });
+
+    await page.waitForSelector('div#custom17', { visible: true });
 
     // Click the dropdown to expand it
-    await page.click('div[name="custom17"]');
+    await page.click('div#custom17');
     console.log('Clicked on "Mode of Transport" dropdown.'); // Open dropdown
-    console.log('Clicked on "Custom17" dropdown.');
-    await page.waitForSelector('ul[role="listbox"]');
-    // select the mode of transport 
+
+    // Wait for the dropdown list to appear
+
+    await page.waitForSelector('div.sapcnqr-selection-list__list-container', { visible: true });
+
+    // await page.waitForSelector('div[role="listbox"]', { visible: true });
+    console.log('Dropdown list is visible now.');
+
+
+    // Select the mode of transport
     if (mode == "Car") {
       await page.evaluate(() => {
         const options = Array.from(document.querySelectorAll('ul[role="listbox"] li'));
-        const desiredOption = options.find(option => option.innerText.includes('Cab/Taxi'));
+        const desiredOption = options.find(option => option.querySelector('div').innerText.includes('Cab/Taxi'));
         if (desiredOption) desiredOption.click();
       });
+      console.log('Selected "Cab/Taxi" via simulated interaction.');
     }
     else {
       await page.evaluate(() => {
         const options = Array.from(document.querySelectorAll('ul[role="listbox"] li'));
-        const desiredOption = options.find(option => option.innerText.includes('Auto'));
+        const desiredOption = options.find(option => option.querySelector('div').innerText.includes('Auto'));
         if (desiredOption) desiredOption.click();
       });
+      console.log('Selected "Auto" via simulated interaction.');
     }
-    console.log('Selected "Cab/Taxi" via simulated interaction.');
+
 
     // Fill "Transaction Date" (input)
     const formattedDate = formatDate(record.dateObj);

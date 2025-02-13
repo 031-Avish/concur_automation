@@ -2,3 +2,4 @@ sessionCookies.json
 node_modules/
 *.pdf
 *.csv
+.DS_Store
