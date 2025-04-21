@@ -5,8 +5,8 @@ const csv = require('csv-parser');
 
 const monthNames = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
-const currentMonth = monthNames[new Date().getMonth()];
-const reportName = `January Expenses`;
+const currentMonth = monthNames[new Date().getMonth()-1];
+const reportName = `${currentMonth} Expenses`;
 // path of csv
 const csvFilePath = path.resolve(__dirname, 'RideInvoice/processed/output.csv');
 
@@ -78,11 +78,6 @@ const formatDate = (inputDate) => {
     console.log("Could not find the button with class 'sapcnqr-button__text'.");
   }
 
-  // const monthNames = ["January", "February", "March", "April", "May", "June",
-  //   "July", "August", "September", "October", "November", "December"];
-  // const currentMonth = monthNames[new Date().getMonth()];
-  // const reportName = `${currentMonth} Expense`;
-
   // fill the input field 
   await page.waitForSelector('#name', { timeout: 10000 }); // Wait up to 10 seconds
   await page.type('#name', `${reportName}`);
@@ -102,15 +97,18 @@ const formatDate = (inputDate) => {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     // add new expense
-    await page.waitForSelector('button.sapcnqr-button--create[data-toolbar-region="end"]', { timeout: 100000 });
-    await page.click('button.sapcnqr-button--create[data-toolbar-region="end"]');
-    await page.waitForSelector('button[data-nuiexp="report-createNewExpense-tab"]', { timeout: 100000 });
+    await page.waitForSelector('button.sapcnqr-button--create', { timeout: 100000 });
+    await page.click('button.sapcnqr-button--create');
 
+    await page.waitForSelector('.create-new-expense-menu-item button', { timeout: 100000 });
+
+    // Optional wait (if needed to allow animations)
     await new Promise(resolve => setTimeout(resolve, 3000));
+    await page.waitForSelector('.create-new-expense-menu-item button', { timeout: 200000 });
 
-    await page.waitForSelector('button[data-nuiexp="report-createNewExpense-tab"]', { timeout: 200000 });
-    await page.click('button[data-nuiexp="report-createNewExpense-tab"]');
-    console.log('Clicked "New Expense" tab.');
+    // Click "Create New Expense"
+    await page.click('.create-new-expense-menu-item button');
+    console.log('Clicked "Create New Expense".');
 
     // Wait for the "Commute" button and click it
     await page.waitForSelector('button[aria-label="Commute"]', { timeout: 20000 });

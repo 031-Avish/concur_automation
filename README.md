@@ -41,7 +41,7 @@ Run the following command to extract data from the invoice PDFs ( make sure you 
 node extract.js
 ```
 ### 6. Upload Expenses to Concur 
-#### ⚠️ Important Change the report name in line 9 of upload.js file 
+#### ⚠️ Important : By default it takes Report name as "Previous Month Expenses" If you want Change the Reportname in line 9 of upload.js file 
 Execute the following command to start the upload process:
 
 ```sh
