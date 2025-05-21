@@ -146,7 +146,7 @@ const doForRapido = (filePath, text) => {
 const doForUber = (filePath, text) => {
   const vendor = "Uber";
   // Define your regex patterns for uber 
-  const invoiceRegex = /License Plate:\s*(.*?)\s*Fares/;
+  const invoiceRegex = /License Plate:\s*([A-Z0-9 ]{6,20}?)(?=\s*Fares|\s*$)/i;
   const amountRegex = /₹(\d+\.\d+)/; // Match ₹ followed by digits and decimal
   const dateRegex = /\b(?:\d{1,2}min|\d{1,2}min\(s\))?\s*([A-Za-z]+\s\d{1,2},?\s\d{4}|\d{1,2}\s[A-Za-z]+\s\d{4})/;
   text = text.split('|')
@@ -160,7 +160,7 @@ const doForUber = (filePath, text) => {
   const amount = text[3].match(amountRegex)[1];
   let invoiceNumber = '';
   try {
-    invoiceNumber = text[3].match(invoiceRegex)[1];
+    invoiceNumber = text[3].match(invoiceRegex)[1].replace(/\s+/g, '');
   } catch {
     console.log(text.length)
   }
