@@ -164,8 +164,10 @@ const formatDate = (inputDate) => {
     // Fill "Transaction Date" (input)
     const formattedDate = formatDate(record.dateObj);
     // const formattedDate = record.dateObj;
-    await page.type('#transactionDate-date-picker-input', formattedDate);
+    await page.type('#transactionDate-date-input-field-input', formattedDate);
     console.log('Entered Transaction Date.');
+
+  
 
     // Fill "Vendor Name" (text field)
     await page.type('#vendorName', record.vendor);
