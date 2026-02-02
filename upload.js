@@ -38,7 +38,8 @@ const formatDate = (inputDate) => {
   const cookiesPath = path.resolve(__dirname, 'sessionCookies.json');
 
   // Launch Puppeteer
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch({ headless: false ,defaultViewport: null,
+    args: ['--start-maximized']});
   const page = await browser.newPage();
 
   // Check if session cookies exist
@@ -115,7 +116,7 @@ const formatDate = (inputDate) => {
     await page.click('button[aria-label="Commute"]');
     console.log('Clicked "Commute" option.');
 
-    // Wait for the "Add Receipt" button and click it
+    // Wait for the "Add Receipt" button and click it 
     await page.waitForSelector('button.spend-common__drag-n-drop__button', { timeout: 20000 });
     await page.click('button.spend-common__drag-n-drop__button');
     console.log('Clicked "Add Receipt" button.');
@@ -190,9 +191,9 @@ const formatDate = (inputDate) => {
     // wait for file to get uploaded 
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Save the form
-    await page.waitForSelector('button[data-nuiexp="save-expense"]', { timeout: 20000 });
-    await page.click('button[data-nuiexp="save-expense"]');
+    // Save the form exp-save-expense
+    await page.waitForSelector('button[data-nuiexp="exp-save-expense"]', { timeout: 20000 });
+    await page.click('button[data-nuiexp="exp-save-expense"]');
     console.log('Clicked "Save Expense" button.');
   }
 
