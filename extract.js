@@ -95,27 +95,32 @@ const doForRapido = (filePath, text) => {
   // Define your regex patterns for rapido 
   const invoiceRegex = /RD\d+(?:\s*\d+)?/g;  // To get invoice number 
   const amountRegex = /Selected Price\s*₹\s*(\d+)/; // to get the total amount 
-  const dateRegex = /\b(?:Auto|Car|Bike)\b\s*(.*?)(AM|PM)/; // to get the date of invoice 
+  const dateRegex = /([A-Za-z]{3,9}\s*\d{1,2}(?:st|nd|rd|th)?\s*\d{4}[,]?\s*\d{1,2}:\d{2}\s*(AM|PM))/i; // to get the date of invoice
+  const modeNearDateRegex = /(Auto|Car|Bike)\s*(?=(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec))/i;
   const fromAddressRegex = /₹\s*\d+\s*(.*?)This document/s;
   const toAddressRegex = /estimated price range\s*(.*?)(?=\n|$)/s; // get address 
   const invoiceNumber = text.match(invoiceRegex)?.[0].replaceAll(" ", '');
   const amount = text.match(amountRegex)?.[1];
-  const dateTimeMatch = text.match(dateRegex);
-  // get the mode of transport ( Car or Auto )
-  let mode = dateTimeMatch[0].split(" ")[0];
-  if(mode=="Auto" || mode=="Bike"){
-    mode="Auto"
+  // OCR can split hour digits like "1 1:12 AM"; normalize that before date extraction.
+  const rapidoDateText = text.replace(/\b(\d)\s+(\d:\d{2}\s*(?:AM|PM))\b/gi, '$1$2');
+  const dateTimeMatch = rapidoDateText.match(dateRegex);
+
+  // Default to Auto when mode token is missing (bike invoices do not include "Mode of Vehicle").
+  let mode = "Auto";
+  const modeMatch = text.match(modeNearDateRegex);
+  if (modeMatch?.[1]) {
+    mode = /Car/i.test(modeMatch[1]) ? "Car" : "Auto";
   }
-  else{
-    mode="Car"
-  }
-  let date = dateTimeMatch[1].trim().replace(/(\d+)(th|st|nd|rd)/, '$1');
-  const dateArray = date.split(', ');
-  if (dateArray[0].split(" ").length - 1 === 3) {
-    dateArray[0] = dateArray[0].replace(/(\d) (\d)/g, '$1$2')
-  }
-  dateArray[1] = dateArray[1].replaceAll(' ', '');
-  date = dateArray.join(', ') + ' ' + dateTimeMatch[2];
+
+  // Normalize compact strings like Apr2nd2026,11:54AM to a Date-friendly format.
+  let date = dateTimeMatch?.[1] || "";
+  date = date
+    .replace(/([A-Za-z]{3,9})(\d)/, '$1 $2')
+    .replace(/(\d{4}),?(\d{1,2}:\d{2})/, '$1, $2')
+    .replace(/(\d)(AM|PM)$/i, '$1 $2')
+    .replace(/(\d+)(th|st|nd|rd)/i, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
   const from = text.match(fromAddressRegex)?.[1];
   const to = text.match(toAddressRegex)?.[1];
   const output = {
