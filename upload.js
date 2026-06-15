@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 
-const monthNames = ["December","January", "February", "March", "April", "May", "June",
+const monthNames = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
 const currentMonth = monthNames[new Date().getMonth()-1];
 const reportName = `${currentMonth} Expenses`;
