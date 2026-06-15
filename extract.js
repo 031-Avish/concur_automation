@@ -20,7 +20,7 @@ function identifyService(text) {
     return "Uber";
   }
   // Check for Namma Yatri
-  if (/final amount paid/i.test(text) || /here'syourinvoicepaymentdetails/i.test(text)) {
+  if (/final\s*amount\s*paid/i.test(text) || /here'syourinvoicepaymentdetails/i.test(text)) {
     return "NammaYatri";
   }
   return "Unknown Service";
@@ -28,15 +28,11 @@ function identifyService(text) {
 
 //extract namma yatri details
 const doForNammaYatri = (filePath, text) => {
-  const invoiceRegex = /RideID:\s*(\S+)[^A-Za-z0-9]*DriverName/;
+  const invoiceRegex = /RideID:\s*(\S+?)(?=Driver)/i;
   const vendor = "NammaYatri"
   const amountRegex = /FinalAmountPaid\s*₹\s*(\d+)\s*RideDetails/
   const dateRegex = /(\d{1,2})(?:st|nd|rd|th)?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/;
-  // const addressRegex = /\d{1,2}:\d{2}\s*[APM]{2}([\w\s\+,.]+?)\d{1,2}:\d{2}\s*[APM]{2}([\w\s\+,.]+)/;
-  const addressRegex = /(\d{1,2}:\d{2}\s*[APM]{2}.*?)(\d{1,2}:\d{2}\s*[APM]{2}.*?)([A-Za-z0-9\s,.-]+)/g;
   const amount = text.match(amountRegex)[1];
-  console.log(text.match(amountRegex))
-  console.log("line 39 " + text.match(invoiceRegex));
   const invoiceNumber = text.match(invoiceRegex)[1];
   const date = text.match(dateRegex)[0]
   let dateObj;
@@ -61,10 +57,12 @@ const doForNammaYatri = (filePath, text) => {
     dateObj.setHours(dateObj.getHours() + 5, dateObj.getMinutes() + 30)
   }
 
-  console.log(text.match(addressRegex))
-  const match = text.match(addressRegex);
-  const from = match[0].split('...')[0].trim();
-  const to = match[0].split('...')[0].trim();
+  const licPlateIdx = text.toLowerCase().indexOf('licenseplate');
+  const afterLicensePlate = licPlateIdx >= 0 ? text.slice(licPlateIdx) : text;
+  const nyAddressRegex = /\d{1,2}:\d{2}\s*(?:AM|PM)(.*?)India/gi;
+  const addrMatches = [...afterLicensePlate.matchAll(nyAddressRegex)];
+  const from = addrMatches[0]?.[1]?.replace(/^,\s*/, '').trim() || '';
+  const to = addrMatches[1]?.[1]?.replace(/^,\s*/, '').trim() || '';
   const output = {
     from,
     to,
@@ -102,7 +100,9 @@ const doForRapido = (filePath, text) => {
   const invoiceNumber = text.match(invoiceRegex)?.[0].replaceAll(" ", '');
   const amount = text.match(amountRegex)?.[1];
   // OCR can split hour digits like "1 1:12 AM"; normalize that before date extraction.
-  const rapidoDateText = text.replace(/\b(\d)\s+(\d:\d{2}\s*(?:AM|PM))\b/gi, '$1$2');
+  const rapidoDateText = text
+    .replace(/\b(\d)\s+(\d:\d{2}\s*(?:AM|PM))\b/gi, '$1$2')  // fix split hour: "1 1:12 AM" → "11:12 AM"
+    .replace(/\b(\d)\s+(\d(?:st|nd|rd|th))\b/gi, '$1$2');    // fix split day: "1 1th" → "11th"
   const dateTimeMatch = rapidoDateText.match(dateRegex);
 
   // Default to Auto when mode token is missing (bike invoices do not include "Mode of Vehicle").
@@ -150,32 +150,49 @@ const doForRapido = (filePath, text) => {
 // extract uber details
 const doForUber = (filePath, text) => {
   const vendor = "Uber";
-  // Define your regex patterns for uber 
-  const invoiceRegex = /License Plate:\s*([A-Z0-9 ]{6,20}?)(?=\s*Fares|\s*$)/i;
-  const amountRegex = /₹(\d+\.\d+)/; // Match ₹ followed by digits and decimal
-  const dateRegex = /\b(?:\d{1,2}min|\d{1,2}min\(s\))?\s*([A-Za-z]+\s\d{1,2},?\s\d{4}|\d{1,2}\s[A-Za-z]+\s\d{4})/;
-  text = text.split('|')
-  console.log(text);
-  let mode = "Car" 
+  let from, to, amount, invoiceNumber, date, dateObj;
+  let mode = "Car";
   if (/Auto/i.test(text) || /Moto/i.test(text)) {
-    mode = "Auto"
+    mode = "Auto";
   }
-  const from = text[1].trim();
-  const to = text[2].trim();
-  const amount = text[3].match(amountRegex)[1];
-  let invoiceNumber = '';
-  try {
-    invoiceNumber = text[3].match(invoiceRegex)[1].replace(/\s+/g, '');
-  } catch {
-    console.log(text.length)
+
+  if (text.includes('|')) {
+    // Old format with pipe separators
+    const invoiceRegex = /License\s*Plate:\s*([A-Z0-9 ]{6,20}?)(?=\s*Fares|\s*$)/i;
+    const amountRegex = /₹(\d+\.\d+)/;
+    const dateRegex = /\b(?:\d{1,2}min|\d{1,2}min\(s\))?\s*([A-Za-z]+\s\d{1,2},?\s\d{4}|\d{1,2}\s[A-Za-z]+\s\d{4})/;
+    const parts = text.split('|');
+    from = parts[1]?.trim() || '';
+    to = parts[2]?.trim() || '';
+    amount = parts[3]?.match(amountRegex)?.[1] || '';
+    try {
+      invoiceNumber = parts[3]?.match(invoiceRegex)?.[1].replace(/\s+/g, '') || '';
+    } catch {
+      invoiceNumber = '';
+    }
+    const dateExtract = parts[3]?.match(dateRegex)?.[1] || '';
+    date = dateExtract;
+    dateObj = new Date(dateExtract);
+    dateObj.setHours(dateObj.getHours() + 5, dateObj.getMinutes() + 30);
+  } else {
+    // New format (no pipe separators)
+    const amountRegex = /Total₹(\d+\.?\d*)/;
+    const dateRegex = /([A-Za-z]+ \d+, \d{4})/;
+    const licenseRegex = /License\s*Plate:\s*([A-Z0-9 ]+?)(?=\d{1,2}:\d{2})/i;
+
+    amount = text.match(amountRegex)?.[1] || '';
+    date = text.match(dateRegex)?.[1] || '';
+    dateObj = date ? new Date(date) : new Date();
+    dateObj.setHours(dateObj.getHours() + 5, dateObj.getMinutes() + 30);
+    invoiceNumber = text.match(licenseRegex)?.[1]?.replace(/\s+/g, '') || '';
+
+    // Addresses appear after LicensePlate, each preceded by a time like "11:18am"
+    const licPlateIdx = text.toLowerCase().indexOf('licenseplate:');
+    const afterLicensePlate = licPlateIdx >= 0 ? text.slice(licPlateIdx) : text;
+    const addrMatches = [...afterLicensePlate.matchAll(/\d{1,2}:\d{2}\s*(?:am|pm)(.*?)India/gi)];
+    from = addrMatches[0]?.[1]?.trim() || '';
+    to = addrMatches[1]?.[1]?.trim() || '';
   }
-  console.log(text[3].match(dateRegex));
-  const dateExtract = text[3].match(dateRegex)[1];
-  console.log(dateExtract);
-  const date = dateExtract
-  const dateObj = new Date(new Date(dateExtract));
-  console.log(dateObj);
-  dateObj.setHours(dateObj.getHours() + 5, dateObj.getMinutes() + 30)
 
   const output = {
     invoiceNumber,
