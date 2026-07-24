@@ -3,6 +3,20 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 
+const getChromePath = () => {
+  const candidates = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
+    '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+    `${process.env.HOME}/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`,
+  ];
+  const found = candidates.find(p => fs.existsSync(p));
+  if (found) console.log(`Using browser at: ${found}`);
+  else console.log('No system browser found, using Puppeteer bundled Chromium.');
+  return found;
+};
+
 const monthNames = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
 const currentMonth = monthNames[new Date().getMonth()-1];
@@ -38,8 +52,13 @@ const formatDate = (inputDate) => {
   const cookiesPath = path.resolve(__dirname, 'sessionCookies.json');
 
   // Launch Puppeteer
-  const browser = await puppeteer.launch({ headless: false ,defaultViewport: null,
-    args: ['--start-maximized']});
+  const chromePath = getChromePath();
+  const browser = await puppeteer.launch({
+    headless: false,
+    defaultViewport: null,
+    ...(chromePath && { executablePath: chromePath }),
+    args: ['--start-maximized'],
+  });
   const page = await browser.newPage();
 
   // Check if session cookies exist
@@ -51,7 +70,7 @@ const formatDate = (inputDate) => {
   }
 
   // Navigate to the SAP Concur page
-  await page.goto('https://www.concursolutions.com/nui/expense', { waitUntil: 'networkidle2' });
+  await page.goto('https://www.concursolutions.com/nui/expense', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
   // Wait for the user profile icon to appear, indicating successful login
   try {
@@ -97,18 +116,21 @@ const formatDate = (inputDate) => {
     const mode = record.mode;
     await new Promise(resolve => setTimeout(resolve, 5000));
 
-    // add new expense
-    await page.waitForSelector('button.sapcnqr-button--create', { timeout: 100000 });
-    await page.click('button.sapcnqr-button--create');
+    // add new expense - wait for either empty-state card or toolbar button
+    await page.waitForSelector(
+      'button[data-nuiexp="add-expense-menu-button"], li[data-nuiexp="empty-state-manually-create"] .sapcnqr-grid-list-item__button',
+      { timeout: 100000 }
+    );
 
-    await page.waitForSelector('.create-new-expense-menu-item button', { timeout: 100000 });
-
-    // Optional wait (if needed to allow animations)
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    await page.waitForSelector('.create-new-expense-menu-item button', { timeout: 200000 });
-
-    // Click "Create New Expense"
-    await page.click('.create-new-expense-menu-item button');
+    if (await page.$('li[data-nuiexp="empty-state-manually-create"] .sapcnqr-grid-list-item__button')) {
+      await page.click('li[data-nuiexp="empty-state-manually-create"] .sapcnqr-grid-list-item__button');
+    } else {
+      await page.click('button[data-nuiexp="add-expense-menu-button"]');
+      await page.waitForSelector('.create-new-expense-menu-item button', { timeout: 100000 });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      await page.waitForSelector('.create-new-expense-menu-item button', { timeout: 200000 });
+      await page.click('.create-new-expense-menu-item button');
+    }
     console.log('Clicked "Create New Expense".');
 
     // Wait for the "Commute" button and click it

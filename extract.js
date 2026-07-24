@@ -91,7 +91,7 @@ const doForNammaYatri = (filePath, text) => {
 const doForRapido = (filePath, text) => {
   const vendor = "Rapido";
   // Define your regex patterns for rapido 
-  const invoiceRegex = /RD\d+(?:\s*\d+)?/g;  // To get invoice number 
+  const invoiceRegex = /RD(?:\s*\d+)+/g;  // To get invoice number (digits can be split across multiple chunks by PDF kerning)
   const amountRegex = /Selected Price\s*₹\s*(\d+)/; // to get the total amount 
   const dateRegex = /([A-Za-z]{3,9}\s*\d{1,2}(?:st|nd|rd|th)?\s*\d{4}[,]?\s*\d{1,2}:\d{2}\s*(AM|PM))/i; // to get the date of invoice
   const modeNearDateRegex = /(Auto|Car|Bike)\s*(?=(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec))/i;
@@ -102,7 +102,8 @@ const doForRapido = (filePath, text) => {
   // OCR can split hour digits like "1 1:12 AM"; normalize that before date extraction.
   const rapidoDateText = text
     .replace(/\b(\d)\s+(\d:\d{2}\s*(?:AM|PM))\b/gi, '$1$2')  // fix split hour: "1 1:12 AM" → "11:12 AM"
-    .replace(/\b(\d)\s+(\d(?:st|nd|rd|th))\b/gi, '$1$2');    // fix split day: "1 1th" → "11th"
+    .replace(/\b(\d)\s+(\d(?:st|nd|rd|th))\b/gi, '$1$2')     // fix split day: "1 1th" → "11th"
+    .replace(/(\d{1,2}:\d)\s+(\d)\s*(AM|PM)/gi, '$1$2 $3');  // fix split minute: "1:1 1 PM" → "1:11 PM"
   const dateTimeMatch = rapidoDateText.match(dateRegex);
 
   // Default to Auto when mode token is missing (bike invoices do not include "Mode of Vehicle").
